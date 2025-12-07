@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard IoT — Monitoreo de Plantas</title>
+
+    <!-- Tipografía profesional -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap + Chart.js -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .navbar-custom {
+            background: linear-gradient(90deg, #0f4c81, #2b6cb0);
+            padding: 14px 22px;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 16px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            transition: all .2s ease;
+        }
+
+        .card-custom:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+        }
+
+        .plant-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f4c81;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .metric {
+            font-size: 16px;
+            margin: 2px 0;
+            color: #333;
+        }
+
+        .icon {
+            width: 26px;
+            height: 26px;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+        }
+
+        .estado-badge {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .estado-neutral {
+            background-color: #e2e8f0;
+            color: #1a202c;
+        }
+
+        .estado-ok {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+
+        .estado-alerta {
+            background-color: #fefcbf;
+            color: #744210;
+        }
+
+        .estado-critico {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+
+        .conexion-badge {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            background-color: #fefcbf;
+            color: #1a202c;
+        }
+        .conexion-ok {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+        .conexion-error {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+
+        .last-update {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* Contenedor fijo para la gráfica */
+        .chart-container {
+            width: 100%;
+            height: 360px;       
+            position: relative;
+        }
+
+        /* El canvas llena el contenedor */
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Centrar verticalmente las tarjetas en la página */
+        .page-wrapper {
+            min-height: calc(100vh - 80px); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card-custom {
+            max-width: 620px;
+            min-height: 720px;     /* MAS ALTA */
+            padding: 28px 24px;    /* MAS ESPACIO ADENTRO */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+
+
+
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar-custom">
+        <span>Dashboard IoT — Humedad y Temperatura por Planta</span>
+        <div class="text-end">
+            <span id="status-badge" class="conexion-badge">Conectando...</span>
+            <div id="last-update" class="last-update">Última actualización: --</div>
+        </div>
+    </div>
+
+    <div class="page-wrapper">
+        <div class="container-fluid py-4">
+            <div class="row justify-content-center g-4">
+
+
+                <!-- ================= PLANTA 1 ================= -->
+                <div class="col-12 col-md-5 col-lg-4">
+                    <div class="card-custom">
+                        <div class="plant-title">
+                            <img class="icon" src="https://symbl-cdn.com/i/webp/d9/473ff79758f677cb8879408da5fc79.webp">
+                            Planta de René
+                        </div>
+
+                        <p id="p1_temp" class="metric">Temperatura: -- °C</p>
+                        <p id="p1_hum" class="metric">Humedad: -- %</p>
+                        <p id="p1_estado" class="estado-badge estado-neutral">Estado: Esperando datos...</p>
+                        <p id="p1_last" class="last-update">Último dato: --</p>
+
+                        <div class="chart-container">
+                            <canvas id="g1"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= PLANTA 2 ================= -->
+                <div class="col-12 col-md-5 col-lg-4">
+                    <div class="card-custom">
+                        <div class="plant-title">
+                            <img class="icon" src="https://symbl-cdn.com/i/webp/d9/473ff79758f677cb8879408da5fc79.webp">
+                            Planta de Alan
+                        </div>
+
+                        <p id="p2_temp" class="metric">Temperatura: -- °C</p>
+                        <p id="p2_hum" class="metric">Humedad: -- %</p>
+                        <p id="p2_estado" class="estado-badge estado-neutral">Estado: Esperando datos...</p>
+                        <p id="p2_last" class="last-update">Último dato: --</p>
+
+                        <div class="chart-container">
+                            <canvas id="g2"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= PLANTA 3 ================= -->
+                <div class="col-12 col-md-5 col-lg-4">
+                    <div class="card-custom">
+                        <div class="plant-title">
+                            <img class="icon" src="https://symbl-cdn.com/i/webp/d9/473ff79758f677cb8879408da5fc79.webp">
+                            Planta de Alessandro
+                        </div>
+
+                        <p id="p3_temp" class="metric">Temperatura: -- °C</p>
+                        <p id="p3_hum" class="metric">Humedad: -- %</p>
+                        <p id="p3_estado" class="estado-badge estado-neutral">Estado: Esperando datos...</p>
+                        <p id="p3_last" class="last-update">Último dato: --</p>
+
+                        <div class="chart-container">
+                            <canvas id="g3"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+<script>
+function crearGrafica(ctx) {
+    return new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: "Temp (°C)",
+                    borderColor: "#e63946",
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    tension: 0.35,
+                    data: []
+                },
+                {
+                    label: "Hum (%)",
+                    borderColor: "#1d3557",
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    tension: 0.35,
+                    data: []
+                }
+            ]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        font: { size: 11 },
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        usePointStyle: true,
+                        padding: 12
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 6
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: 100,    
+                    grace: '10%', 
+                    ticks: {
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+let g1 = crearGrafica(document.getElementById("g1"));
+let g2 = crearGrafica(document.getElementById("g2"));
+let g3 = crearGrafica(document.getElementById("g3"));
+
+function calcularEstado(h) {
+    if (h >= 60) return { texto: "Óptimo", clase: "estado-ok" };
+    if (h >= 40) return { texto: "Atención", clase: "estado-alerta" };
+    return { texto: "Crítico", clase: "estado-critico" };
+}
+
+const statusBadge = document.getElementById("status-badge");
+const lastUpdate  = document.getElementById("last-update");
+
+function setEstadoConexion(tipo, texto) {
+    statusBadge.className = "conexion-badge";
+    if (tipo === "ok")  statusBadge.classList.add("conexion-ok");
+    if (tipo === "err") statusBadge.classList.add("conexion-error");
+    statusBadge.textContent = texto;
+}
+
+function actualizar() {
+    fetch("/api/data")
+        .then(r => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+        })
+        .then(data => {
+
+            setEstadoConexion("ok", "Conectado");
+
+            const ahora = new Date();
+            lastUpdate.textContent = "Última actualización: " +
+                ahora.toLocaleTimeString();
+
+            const plantas = [
+                {id: 1, data: data.rene, graf: g1},
+                {id: 2, data: data.alan, graf: g2},
+                {id: 3, data: data.alessandro, graf: g3},
+            ];
+
+            plantas.forEach(p => {
+
+                const tempElem = document.getElementById(`p${p.id}_temp`);
+                const humElem  = document.getElementById(`p${p.id}_hum`);
+                const estElem  = document.getElementById(`p${p.id}_estado`);
+                const lastElem = document.getElementById(`p${p.id}_last`);
+                const card     = estElem.closest(".card-custom");
+
+                // SIN DATOS PARA ESA PLANTA
+                if (!p.data || p.data.length === 0) {
+                    tempElem.innerHTML = "Temperatura: -- °C";
+                    humElem.innerHTML  = "Humedad: -- %";
+                    estElem.innerHTML  = "Estado: Esperando datos...";
+                    estElem.className  = "estado-badge estado-neutral";
+                    lastElem.textContent = "Último dato: --";
+                    card.style.opacity = 1;
+                    card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.08)";
+                    return;
+                }
+
+                // Solo últimos 40 registros
+                const ultimos = p.data.slice(-40);
+
+                let temps = ultimos.map(x => x[0]).reverse();
+                let hums  = ultimos.map(x => x[1]).reverse();
+                let dates = ultimos.map(x => x[2].substring(11, 16)).reverse();
+
+                p.graf.data.labels = dates;
+                p.graf.data.datasets[0].data = temps;
+                p.graf.data.datasets[1].data = hums;
+                p.graf.update();
+
+                // Valores a mostrar (redondeados)
+                let temp = Number(temps.at(-1)).toFixed(1);
+                let hum  = Number(hums.at(-1)).toFixed(0);
+
+                tempElem.innerHTML = `Temperatura: ${temp} °C`;
+                humElem.innerHTML  = `Humedad: ${hum} %`;
+
+                // Último timestamp crudo
+                const lastRaw  = ultimos[ultimos.length - 1][2];
+                lastElem.textContent = "Último dato: " + lastRaw;
+
+                // AQUÍ YA NO HAY LÓGICA DE OFFLINE POR TIEMPO
+                let estado = calcularEstado(hum);
+                estElem.innerHTML = "Estado: " + estado.texto;
+                estElem.className = "estado-badge " + estado.clase;
+
+                // Estilo visual según estado (sin offline)
+                if (estado.texto === "Crítico") {
+                    card.style.boxShadow = "0 0 0 2px rgba(229, 62, 62, 0.6)";
+                    card.style.opacity = 1;
+                } else {
+                    card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.08)";
+                    card.style.opacity = 1;
+                }
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            setEstadoConexion("err", "Sin conexión");
+        });
+}
+
+actualizar();
+setInterval(actualizar, 2000);
+</script>
+
+
+</body>
+</html>
